@@ -1,10 +1,11 @@
 const express = require("express");
 const session = require("express-session");
-const createError = require("http-errors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const loggerHttp = require("morgan");
+const createHttpError = require("http-errors");
 const rfs = require("rotating-file-stream");
+const fs = require("fs");
 const path = require("path");
 
 const Logger = require("#root/lib/logger");
@@ -24,6 +25,8 @@ const routes_api_v1_members = require("#routes/api/v1/members");
 const routes_api_v1_projects = require("#routes/api/v1/projects");
 const routes_api_v1_tasks = require("#routes/api/v1/tasks");
 // const routesLangEnAccount = require("#routes/lang/en/account");
+
+const routes_setting = require("#routes/setting/index");
 
 loggerHttp.token("protocol", function (req, res) {
   // @ts-ignore
@@ -55,6 +58,18 @@ async function init() {
   app.set("views", path.join(__dirname, "views"));
   app.set("view engine", "ejs");
 
+  app.set("database", db.connected);
+  app.set(
+    "storage",
+    await fs.promises
+      .access(path.join(env.PWD, "storage"), fs.constants.F_OK)
+      .then(
+        () => true,
+        () => false
+      )
+  );
+  app.set("environment", !!env.SERVER_HAS_ENV);
+
   app.use(limitter);
   app.use(
     loggerHttp(env.LOG_STDOUT ? "dev" : env.LOG_FORMAT, {
@@ -66,51 +81,40 @@ async function init() {
           }),
     })
   );
-  // app.use(express.json());
-  // app.use(express.urlencoded({ extended: false }));
-  // app.use(cookieParser());
-  // app.use(
-  //   session({
-  //     secret: crypto.randomBytes(48).toString("hex"),
-  //     name: "sessionId",
-  //     resave: true,
-  //     saveUninitialized: true,
-  //   })
-  // );
-  // app.use(helmet);
+
+  // @ts-ignore
+  app.use(helmet());
+  app.use("lang", cookieParser());
+  app.use(
+    "lang",
+    session({
+      secret: "secret",
+      name: "sessionId",
+      resave: true,
+      saveUninitialized: true,
+    })
+  );
   app.use("/public", express.static(path.join(__dirname, "public")));
   app.use("/resources", express.static(path.join(__dirname, "storage")));
 
-  app.use("/api/v1", express.json(), express.urlencoded({ extended: true }));
+  app.use("/setting", await routes_setting(app));
+
+  app.use("/api", express.json(), express.urlencoded({ extended: true }));
   app.use("/api/v1/members", await routes_api_v1_members(app));
   app.use("/api/v1/projects", await routes_api_v1_projects(app));
   app.use("/api/v1/tasks", await routes_api_v1_tasks(app));
-  app.use(
-    "/api/v1/",
-    Interchange.not_found_middle(),
-    Interchange.error_middle()
-  );
+  app.use("/api", Interchange.not_found_middle(), Interchange.error_middle());
 
-  // app.use(function (req, res, next) {
-  //   next(new createError.NotFound());
-  // });
+  app.use(function (req, res, nx) {
+    nx(createHttpError(404));
+  });
+  app.use(function (err, req, res, next) {
+    res.locals.message = err.message;
+    res.locals.error = req.app.get("env") === "development" ? err : {};
 
-  // app.use(function (err, req, res, next) {
-  //   console.log("cause", err.cause);
-  //   console.log("expose", err.expose);
-  //   console.log("headers", err.headers);
-  //   console.log("message", err.message);
-  //   console.log("name", err.name);
-  //   console.log("stack", err.stack);
-  //   console.log("status", err.status);
-  //   console.log("statusCode", err.statusCode);
-
-  //   res.locals.message = err.message;
-  //   res.locals.error = req.app.get("env") === "development" ? err : {};
-
-  //   res.status(err.status || 500);
-  //   res.render("error");
-  // });
+    res.status(err.status || 500);
+    res.render("error");
+  });
 
   return app;
 }
