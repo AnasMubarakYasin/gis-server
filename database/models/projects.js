@@ -91,6 +91,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.FLOAT),
         allowNull: false,
       },
+      address: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: false,
+      },
     },
     {
       sequelize,

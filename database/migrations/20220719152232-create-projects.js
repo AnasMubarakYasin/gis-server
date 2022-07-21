@@ -71,6 +71,10 @@ module.exports = {
         type: Sequelize.ARRAY(Sequelize.FLOAT),
         allowNull: false,
       },
+      address: {
+        type: Sequelize.ARRAY(Sequelize.STRING),
+        allowNull: false,
+      },
 
       created_at: {
         allowNull: false,

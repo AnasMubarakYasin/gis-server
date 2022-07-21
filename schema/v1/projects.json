@@ -16,7 +16,8 @@
     "progress",
     "fund_source",
     "fiscal_year",
-    "coordinate"
+    "coordinate",
+    "address"
   ],
   "additionalProperties": false,
   "properties": {
@@ -60,6 +61,10 @@
       "type": "array",
       "items": { "type": "number" }
     },
+    "address": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "createdAt": {
       "type": "string"
     },
@@ -69,14 +74,12 @@
   },
   "definitions": {
     "create": {
-      "$ref": "projects.json",
-      "errorMessage": {}
+      "$ref": "projects.json"
     },
     "update": {
       "$ref": "projects.json",
       "type": "object",
-      "required": [],
-      "errorMessage": {}
+      "required": []
     }
   }
 }
