@@ -4,6 +4,7 @@
   "title": "Schema Projects",
   "type": "object",
   "required": [
+    "id_admins",
     "image",
     "name",
     "name_company",
@@ -14,13 +15,14 @@
     "status",
     "progress",
     "fund_source",
-    "fiscal_year"
+    "fiscal_year",
+    "coordinate"
   ],
   "additionalProperties": false,
   "properties": {
-    "id": {
-      "type": "number"
-    },
+    "id": { "type": "integer" },
+    "id_supervisors": { "type": "integer" },
+    "id_admins": { "type": "integer" },
     "image": {
       "type": "string"
     },
@@ -53,6 +55,10 @@
     },
     "fiscal_year": {
       "type": "string"
+    },
+    "coordinate": {
+      "type": "array",
+      "items": { "type": "number" }
     },
     "createdAt": {
       "type": "string"

@@ -1,6 +1,8 @@
 import { Model, ModelStatic, Optional } from "sequelize";
 import { SchemaProjects } from "../type/v1/projects";
 import { SchemaTasks } from "../type/v1/tasks";
+import { SchemaAdmins } from "../type/v1/admins";
+import { SchemaSupervisors } from "../type/v1/supervisors";
 
 declare global {
   namespace NodeJS {
@@ -47,9 +49,13 @@ declare global {
         Optional<SchemaProjects, AttrDef>
       > {}
       class Tasks extends Model<SchemaTasks, Optional<SchemaTasks, AttrDef>> {}
+      class Admins extends Model<SchemaAdmins, Optional<SchemaAdmins, AttrDef>> {}
+      class Supervisors extends Model<SchemaSupervisors, Optional<SchemaSupervisors, AttrDef>> {}
 
       type CtorProjects = ModelStatic<Projects>;
       type CtorTasks = ModelStatic<Tasks>;
+      type CtorAdmins = ModelStatic<Admins>;
+      type CtorSupervisors = ModelStatic<Supervisors>;
     }
   }
 }

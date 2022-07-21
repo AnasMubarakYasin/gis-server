@@ -74,63 +74,59 @@ module.exports = async function (app) {
     recursive: true,
   });
 
-  router.use(
-    "/",
-    authc.jwt_auth(
-      async function (req, res, nx) {
-        return {
-          issuer: "member",
-        };
-      },
-      async function (payload, req, res, nx) {
-        const { sub: id } = payload;
-        const member = await Model_Users.findOne({ where: { id } });
-        if (!member) {
-          nx(interchange.error(401, "user not exists"));
-        }
-        return member.toJSON();
+  const authc_route = authc.jwt_auth(
+    async function (req, res, nx) {
+      return {
+        issuer: "user",
+      };
+    },
+    async function (payload, req, res, nx) {
+      const { sub: id, role } = payload;
+      const Model = db.model(role + "s");
+      if (!Model) {
+        nx(interchange.error(401, `model ${role} not exists`));
       }
-    )
+      const user = await Model.findOne({ where: { id } });
+      if (!user) {
+        nx(interchange.error(401, `user ${role} not exists`));
+      }
+      return user.toJSON();
+    }
   );
 
-  router
-    .route("/")
-    .get(
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "read",
-          number: "all",
-        };
-      }),
-      async function (req, res, nx) {
-        interchange.success(res, 200, await Model.findAll());
-      }
-    )
-    .post(
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "write",
-          number: "one",
-        };
-      }),
-      validator.validate({ body: "projects.json#/definitions/create" }),
-      async function (req, res, nx) {
-        try {
-          const project = await Model.create(req.body);
+  router.get("/", async function (req, res, nx) {
+    try {
+      interchange.success(res, 200, await Model.findAll());
+    } catch (error) {
+      nx(error);
+    }
+  });
+  router.post(
+    "/create",
+    authc_route,
+    authz.rbac_auth(async function (req, res, nx) {
+      return {
+        role: req[authc.s.auth_info].role,
+        resource: api_name,
+        action: "write",
+        number: "one",
+      };
+    }),
+    validator.validate({ body: "projects.json#/definitions/create" }),
+    async function (req, res, nx) {
+      try {
+        const project = await Model.create(req.body);
 
-          interchange.success(res, 201);
-        } catch (error) {
-          nx(interchange.error(500, error));
-        }
+        interchange.success(res, 201);
+      } catch (error) {
+        nx(interchange.error(500, error));
       }
-    );
+    }
+  );
   router
     .route("/:id")
     .patch(
+      authc_route,
       authz.rbac_auth(async function (req, res, nx) {
         return {
           role: req[authc.s.auth_info].role,
@@ -152,10 +148,13 @@ module.exports = async function (app) {
           const image = project.image.replace("resources", "storage");
           const f_path = path.join(root, image);
 
-          await fs.promises
-            .access(f_path, fs.constants.F_OK)
-            .then(() => fs.promises.rm(f_path))
-            .catch((err) => {});
+          if (body.image != project.image) {
+            await fs.promises
+              .access(f_path, fs.constants.F_OK)
+              .then(() => fs.promises.rm(f_path))
+              .catch((err) => {});
+          }
+
           await model.update(body);
 
           interchange.success(res, 200, "updated");
@@ -165,6 +164,7 @@ module.exports = async function (app) {
       }
     )
     .delete(
+      authc_route,
       authz.rbac_auth(async function (req, res, nx) {
         return {
           role: req[authc.s.auth_info].role,
@@ -195,34 +195,22 @@ module.exports = async function (app) {
         }
       }
     );
-
-  router.get(
-    "/name/:name",
-    authz.rbac_auth(async function (req, res, nx) {
-      return {
-        role: req[authc.s.auth_info].role,
-        resource: api_name,
-        action: "read",
-        number: "one",
-      };
-    }),
-    async function (req, res, nx) {
-      try {
-        const project = await Model.findOne({
-          where: { name: req.params.name },
-          include: {
-            model: Model_Tasks,
-            attributes: { exclude: ["createdAt", "updatedAt"] },
-          },
+  router.get("/name/:name", async function (req, res, nx) {
+    try {
+      const project = await Model.findOne({
+        where: { name: req.params.name },
+        include: {
+          model: Model_Tasks,
           attributes: { exclude: ["createdAt", "updatedAt"] },
-        });
-        interchange.success(res, 200, project);
-      } catch (error) {
-        nx(interchange.error(500, error));
-      }
+        },
+        attributes: { exclude: ["createdAt", "updatedAt"] },
+      });
+      interchange.success(res, 200, project);
+    } catch (error) {
+      nx(interchange.error(500, error));
     }
-  );
-  router.route("/image").post(function (req, res, nx) {
+  });
+  router.post("/image", function (req, res, nx) {
     if (!req.is("image/*")) {
       return nx(interchange.error(406));
     }

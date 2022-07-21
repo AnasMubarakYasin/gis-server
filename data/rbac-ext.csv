@@ -4,6 +4,7 @@ p, admin, roles, read|write, one|all
 p, admin, tasks, read|write, one|all
 p, admin, projects, read|write, one|all
 p, admin, members, read|write, one|all
+p, admin, supervisors, read|write, one|all
 
 p, supervisor, accounts, read|write, one
 p, supervisor, projects, read, one|all

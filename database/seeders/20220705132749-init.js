@@ -15,20 +15,18 @@ module.exports = {
      *   isBetaMember: false
      * }], {});
      */
-    await queryInterface.bulkInsert("users", [
+    await queryInterface.bulkInsert("admins", [
       {
-        name: "admin",
-        email: "admin@gis.id",
-        role: "admin",
+        username: "admin",
         password: "1234",
+        email: "admin@gis.id",
         created_at: new Date(),
         updated_at: new Date(),
       },
       {
-        name: "anas",
-        email: "anas@gis.id",
-        role: "admin",
+        username: "anas",
         password: "1234",
+        email: "anas@gis.id",
         created_at: new Date(),
         updated_at: new Date(),
       },

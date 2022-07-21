@@ -1,15 +1,11 @@
 "use strict";
 const { Model } = require("sequelize");
-module.exports = (
-  /** @type {import('sequelize').Sequelize} */ sequelize,
-  /** @type {import('sequelize').DataTypes} */ DataTypes
-) => {
-  class Projects extends Model {
+module.exports = (sequelize, DataTypes) => {
+  class projects extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
-     * @param {Object<string, import('sequelize').ModelStatic<Model>>} models
      */
     static associate(models) {
       // define association here
@@ -19,10 +15,34 @@ module.exports = (
           allowNull: false,
         },
       });
+
+      this.belongsTo(models.supervisors, {
+        foreignKey: {
+          name: "id_supervisors",
+          allowNull: false,
+        },
+      });
+      this.belongsTo(models.admins, {
+        foreignKey: {
+          name: "id_admins",
+          allowNull: false,
+        },
+      });
     }
   }
-  Projects.init(
+  projects.init(
     {
+      id_supervisors: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: "supervisors", key: "id" },
+      },
+      id_admins: {
+        allowNull: false,
+        type: DataTypes.INTEGER,
+        references: { model: "admins", key: "id" },
+      },
+
       image: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -36,7 +56,7 @@ module.exports = (
         allowNull: false,
       },
       contract_number: {
-        type: DataTypes.SMALLINT,
+        type: DataTypes.INTEGER,
         allowNull: false,
       },
       contract_date: {
@@ -67,6 +87,10 @@ module.exports = (
         type: DataTypes.STRING,
         allowNull: false,
       },
+      coordinate: {
+        type: DataTypes.ARRAY(DataTypes.FLOAT),
+        allowNull: false,
+      },
     },
     {
       sequelize,
@@ -74,5 +98,5 @@ module.exports = (
       underscored: true,
     }
   );
-  return Projects;
+  return projects;
 };

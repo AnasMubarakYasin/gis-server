@@ -7,6 +7,8 @@
 
 export interface SchemaProjects {
   id?: number;
+  id_supervisors?: number;
+  id_admins: number;
   image: string;
   name: string;
   name_company: string;
@@ -15,7 +17,10 @@ export interface SchemaProjects {
   activity: string;
   obstacles: string;
   status: string;
-  progress: string;
+  progress: number;
   fund_source: string;
   fiscal_year: string;
+  coordinate: number[];
+  createdAt?: string;
+  updatedAt?: string;
 }

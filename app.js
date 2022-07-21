@@ -17,11 +17,15 @@ const app = express();
 const { env } = process;
 
 const model_users = require("#model/users");
+const model_admins = require("#model/admins");
+const model_supervisors = require("#model/supervisors");
 const model_projects = require("#model/projects");
 const model_tasks = require("#model/tasks");
 
 // const routesApiV0Account = require("#routes/api/v0/account");
 const routes_api_v1_members = require("#routes/api/v1/members");
+const routes_api_v1_admins = require("#routes/api/v1/admins");
+const routes_api_v1_supervisors = require("#routes/api/v1/supervisors");
 const routes_api_v1_projects = require("#routes/api/v1/projects");
 const routes_api_v1_tasks = require("#routes/api/v1/tasks");
 // const routesLangEnAccount = require("#routes/lang/en/account");
@@ -43,7 +47,13 @@ async function init() {
   const db = new Database({
     name: "app",
     url: env.DB_URL,
-    model_loaders: [model_users, model_projects, model_tasks],
+    model_loaders: [
+      model_users,
+      model_admins,
+      model_supervisors,
+      model_projects,
+      model_tasks,
+    ],
     logger: logger,
   });
 
@@ -101,6 +111,8 @@ async function init() {
 
   app.use("/api", express.json(), express.urlencoded({ extended: true }));
   app.use("/api/v1/members", await routes_api_v1_members(app));
+  app.use("/api/v1/admins", await routes_api_v1_admins(app));
+  app.use("/api/v1/supervisors", await routes_api_v1_supervisors(app));
   app.use("/api/v1/projects", await routes_api_v1_projects(app));
   app.use("/api/v1/tasks", await routes_api_v1_tasks(app));
   app.use("/api", Interchange.not_found_middle(), Interchange.error_middle());
@@ -109,6 +121,9 @@ async function init() {
     nx(createHttpError(404));
   });
   app.use(function (err, req, res, next) {
+    if (res.headersSent) {
+      next();
+    }
     res.locals.message = err.message;
     res.locals.error = req.app.get("env") === "development" ? err : {};
 

@@ -71,42 +71,28 @@ module.exports = async function (app) {
     authc.jwt_auth(
       async function (req, res, nx) {
         return {
-          issuer: "member",
+          issuer: "user",
         };
       },
       async function (payload, req, res, nx) {
-        const { sub: id } = payload;
-        const member = await Model_Users.findOne({ where: { id } });
-        if (!member) {
-          nx(interchange.error(401, "user not exists"));
+        const { sub: id, role } = payload;
+        const Model = db.model(role + "s");
+        if (!Model) {
+          nx(interchange.error(401, `model ${role} not exists`));
         }
-        return member.toJSON();
+        const user = await Model.findOne({ where: { id } });
+        if (!user) {
+          nx(interchange.error(401, `user ${role} not exists`));
+        }
+        return user.toJSON();
       }
     )
   );
   router
     .route("/")
-    .get(function (req, res, nx) {})
-    .post(
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "write",
-          number: "one",
-        };
-      }),
-      validator.validate({ body: "tasks.json#/definitions/create" }),
-      async function (req, res, nx) {
-        try {
-          const task = await Model.create(req.body);
-
-          interchange.success(res, 201, task);
-        } catch (error) {
-          nx(error);
-        }
-      }
-    )
+    .get(function (req, res, nx) {
+      nx(interchange.error(501));
+    })
     .patch(
       authz.rbac_auth(async function (req, res, nx) {
         return {
@@ -138,6 +124,26 @@ module.exports = async function (app) {
         }
       }
     );
+  router.route("/create").post(
+    authz.rbac_auth(async function (req, res, nx) {
+      return {
+        role: req[authc.s.auth_info].role,
+        resource: api_name,
+        action: "write",
+        number: "one",
+      };
+    }),
+    validator.validate({ body: "tasks.json#/definitions/create" }),
+    async function (req, res, nx) {
+      try {
+        const task = await Model.create(req.body);
+
+        interchange.success(res, 201, task);
+      } catch (error) {
+        nx(error);
+      }
+    }
+  );
 
   logger.profile(`api ${api_name}`);
 

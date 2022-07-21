@@ -3,9 +3,9 @@
   "definitions": {
     "create": {
       "type": "object",
-      "required": ["name", "email", "role", "password"],
+      "required": ["username", "email", "role", "password"],
       "properties": {
-        "name": {
+        "username": {
           "type": "string"
         },
         "email": {
@@ -31,7 +31,7 @@
     "update": {
       "type": "object",
       "properties": {
-        "name": {
+        "username": {
           "type": ["string", "null"]
         },
         "email": {
@@ -51,7 +51,17 @@
     },
     "remove_many": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": ["integer", "null"]
+          },
+          "role": {
+            "type": ["string", "null"]
+          }
+        }
+      }
     },
     "signin": {
       "type": "object",
