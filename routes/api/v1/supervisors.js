@@ -10,6 +10,7 @@ const Authentication = require("#lib/authentication");
 const Authorization = require("#lib/authorization");
 const Validator = require("#lib/validator");
 const Interchange = require("#lib/interchange");
+const middleware_auth_ctor = require("#middleware/auth");
 
 const api_name = "supervisors";
 const api_version = "1";
@@ -36,7 +37,7 @@ module.exports = async function (app) {
     version: api_version,
     debug: true,
     logger: logger,
-    schema: [schema],
+    schemas: [schema],
   });
   const authc = await new Authentication({
     name: api_name,
@@ -57,30 +58,13 @@ module.exports = async function (app) {
       p_data: path.join(root, "data/rbac-ext.csv"),
     },
   }).init();
+  const middleware_auth = await middleware_auth_ctor(app);
   /**
    * @type {App.Models.CtorSupervisors}
    */
   const Model = db.model(api_name);
-  const router_auth = authc.jwt_auth(
-    async function (req, res, nx) {
-      return {
-        issuer: "user",
-      };
-    },
-    async function (payload, req, res, nx) {
-      const { sub: id, role } = payload;
-      const Model = db.model(role + "s");
-      if (!Model) {
-        nx(interchange.error(401, `model ${role} not exists`));
-      }
-      const user = await Model.findOne({ where: { id } });
-      if (!user) {
-        nx(interchange.error(401, `user ${role} not exists`));
-      }
-      return user.toJSON();
-    }
-  );
-  router.use(router_auth);
+
+  router.use(middleware_auth.router_authc);
 
   router.route("/").get(
     authz.rbac_auth(async function (req, res, nx) {

@@ -44,11 +44,7 @@ module.exports = {
         allowNull: false,
       },
       activity: {
-        type: Sequelize.TEXT("long"),
-        allowNull: false,
-      },
-      obstacles: {
-        type: Sequelize.TEXT("long"),
+        type: Sequelize.TEXT,
         allowNull: false,
       },
       status: {
@@ -73,6 +69,10 @@ module.exports = {
       },
       address: {
         type: Sequelize.ARRAY(Sequelize.STRING),
+        allowNull: false,
+      },
+      proposal: {
+        type: Sequelize.STRING,
         allowNull: false,
       },
 

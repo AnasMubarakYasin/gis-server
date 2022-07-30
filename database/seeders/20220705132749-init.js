@@ -19,14 +19,9 @@ module.exports = {
       {
         username: "admin",
         password: "1234",
-        email: "admin@gis.id",
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-      {
-        username: "anas",
-        password: "1234",
-        email: "anas@gis.id",
+        image: "",
+        nip: "000",
+        name: "admin",
         created_at: new Date(),
         updated_at: new Date(),
       },

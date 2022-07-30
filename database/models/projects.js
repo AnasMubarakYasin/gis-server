@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      this.hasMany(models.tasks, {
+      this.hasMany(models.reports, {
         foreignKey: {
           name: "id_projects",
           allowNull: false,
@@ -64,11 +64,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       activity: {
-        type: DataTypes.TEXT("long"),
-        allowNull: false,
-      },
-      obstacles: {
-        type: DataTypes.TEXT("long"),
+        type: DataTypes.TEXT,
         allowNull: false,
       },
       status: {
@@ -76,7 +72,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       progress: {
-        type: DataTypes.SMALLINT,
+        type: DataTypes.TINYINT,
         allowNull: false,
       },
       fund_source: {
@@ -93,6 +89,10 @@ module.exports = (sequelize, DataTypes) => {
       },
       address: {
         type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: false,
+      },
+      proposal: {
+        type: DataTypes.STRING,
         allowNull: false,
       },
     },

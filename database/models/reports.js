@@ -1,7 +1,7 @@
 "use strict";
 const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class tasks extends Model {
+  class reports extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
-  tasks.init(
+  reports.init(
     {
       id_projects: {
         type: DataTypes.INTEGER,
@@ -25,24 +25,36 @@ module.exports = (sequelize, DataTypes) => {
         references: { model: "projects", key: "id" },
       },
 
-      order: {
-        type: DataTypes.INTEGER,
+      project_copy: {
+        type: DataTypes.JSON,
         allowNull: false,
       },
-      note: {
-        type: DataTypes.TEXT("medium"),
+      reported_at: {
+        type: DataTypes.DATEONLY,
         allowNull: false,
       },
-      done: {
-        type: DataTypes.BOOLEAN,
+      preparation: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+      base_building: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+      structure: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+      supervisor_instruction: {
+        type: DataTypes.TEXT,
         allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: "tasks",
+      modelName: "reports",
       underscored: true,
     }
   );
-  return tasks;
+  return reports;
 };

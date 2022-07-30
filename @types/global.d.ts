@@ -4,6 +4,8 @@ import { SchemaTasks } from "../type/v1/tasks";
 import { SchemaAdmins } from "../type/v1/admins";
 import { SchemaSupervisors } from "../type/v1/supervisors";
 
+import * as TypeV2 from "../type/v2/index";
+
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -23,6 +25,9 @@ declare global {
       PATH_API: string;
       URL_BS_API: string;
       DB_URL: string;
+      SERVER_MODE: string;
+      SERVER_HAS_ENV: boolean;
+      JWT_KEY: string;
     }
   }
   namespace App {
@@ -33,27 +38,34 @@ declare global {
     }
     module Models {
       type AttrDef = "id" | "createdAt" | "updatedAt";
-      type UsersAttributes = {
-        id: number;
-        name: string;
-        email: string;
-        role: string;
+      type UsersInterop = {
+        username: string;
         password: string;
+        image: string;
+        name: string;
+        nip: string;
+        role: string;
       };
 
-      type UserCreationAttributes = Optional<UsersAttributes, "id">;
-
-      class Users extends Model<UsersAttributes, UserCreationAttributes> {}
       class Projects extends Model<
-        SchemaProjects,
-        Optional<SchemaProjects, AttrDef>
+        TypeV2.Projects,
+        Optional<TypeV2.ProjectsCreate, AttrDef>
       > {}
-      class Tasks extends Model<SchemaTasks, Optional<SchemaTasks, AttrDef>> {}
-      class Admins extends Model<SchemaAdmins, Optional<SchemaAdmins, AttrDef>> {}
-      class Supervisors extends Model<SchemaSupervisors, Optional<SchemaSupervisors, AttrDef>> {}
+      class Reports extends Model<
+        TypeV2.Reports,
+        Optional<TypeV2.ReportsCreate, AttrDef>
+      > {}
+      class Admins extends Model<
+        TypeV2.Admins,
+        Optional<TypeV2.AdminsCreate, AttrDef>
+      > {}
+      class Supervisors extends Model<
+        TypeV2.Supervisors,
+        Optional<TypeV2.SupervisorsCreate, AttrDef>
+      > {}
 
       type CtorProjects = ModelStatic<Projects>;
-      type CtorTasks = ModelStatic<Tasks>;
+      type CtorReports = ModelStatic<Reports>;
       type CtorAdmins = ModelStatic<Admins>;
       type CtorSupervisors = ModelStatic<Supervisors>;
     }

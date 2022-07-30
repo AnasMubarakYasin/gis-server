@@ -14,8 +14,7 @@ const Interchange = require("#lib/interchange");
 const api_name = "members";
 const api_version = "1";
 const root = process.env.PWD;
-const schema = require("#schema/v1/members");
-const { response } = require("express");
+const schema = require("#schema/v2/members");
 
 /**
  * @param {import('express').Application} app
@@ -37,6 +36,7 @@ module.exports = async function (app) {
     version: api_version,
     debug: true,
     logger: logger,
+    schemas: [schema],
   });
   const authc = new Authentication({
     name: api_name,
@@ -57,11 +57,6 @@ module.exports = async function (app) {
       p_data: path.join(root, "data/rbac-ext.csv"),
     },
   });
-
-  /**
-   * @type {typeof App.Models.Users}
-   */
-  const Model_Users = db.model("users");
 
   await authc.init();
   await authz.init();
@@ -147,7 +142,7 @@ module.exports = async function (app) {
   );
   router.post(
     "/",
-    validator.validate({ body: schema.definitions.create }),
+    validator.validate({ body: "members.json#/definitions/create" }),
     async function (request, response, next) {
       const { body } = request;
       const Model = db.model(body.role + "s");
@@ -177,7 +172,7 @@ module.exports = async function (app) {
         required: ["id"],
         properties: { id: { type: "string" } },
       },
-      body: schema.definitions.update,
+      body: "members.json#/definitions/update",
     }),
     async function (request, response, next) {
       const { params, body } = request;
@@ -204,7 +199,7 @@ module.exports = async function (app) {
   );
   router.put(
     "/",
-    validator.validate({ body: schema.definitions.undo }),
+    validator.validate({ body: "members.json#/definitions/undo" }),
     async function (request, response, next) {
       const transaction = await db.transaction();
       try {
@@ -228,7 +223,7 @@ module.exports = async function (app) {
   );
   router.delete(
     "/",
-    validator.validate({ body: schema.definitions.remove_many }),
+    validator.validate({ body: "members.json#/definitions/remove_many" }),
     async function (request, response, next) {
       const transaction = await db.transaction();
       try {
@@ -360,12 +355,16 @@ module.exports = async function (app) {
       }
     }
   );
-  router.route("/image").post(function (req, res, nx) {
+  router.post("/image/*", function (req, res, nx) {
     if (!req.is("image/*")) {
       return nx(interchange.error(406));
     }
-    const filename = `${Date.now()}.${req.get("content-type").substring(6)}`;
-    const file_path = path.join(root, "storage/images", filename);
+    const name = Object.values(req.params).join("/");
+    if (!name) {
+      return nx(interchange.error(400));
+    }
+    const file_name = `${name}.${req.get("content-type").substring(6)}`;
+    const file_path = path.join(root, "storage/images", file_name);
     const stream = fs.createWriteStream(file_path);
 
     req.pipe(stream);
@@ -374,7 +373,7 @@ module.exports = async function (app) {
       nx(interchange.error(500, error));
     });
     stream.once("finish", () => {
-      interchange.success(res, 201, path.join("/resources/images", filename));
+      interchange.success(res, 201, path.join("/resources/images", file_name));
     });
   });
 

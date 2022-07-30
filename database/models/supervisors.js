@@ -28,14 +28,21 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      image: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      nip: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       role: {
         type: DataTypes.STRING,
         defaultValue: "supervisor",
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
       },
     },
     {

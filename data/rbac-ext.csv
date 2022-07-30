@@ -1,22 +1,15 @@
 p, root, all, read|write, one|all
 
+p, admin, users, read|write, one|all
 p, admin, roles, read|write, one|all
-p, admin, tasks, read|write, one|all
-p, admin, projects, read|write, one|all
-p, admin, members, read|write, one|all
+p, admin, admins, read|write, one|all
 p, admin, supervisors, read|write, one|all
+p, admin, projects, read|write, one|all
+p, admin, reports, read|write, one|all
+p, admin, models, read|write, one|all
 
-p, supervisor, accounts, read|write, one
+p, supervisor, supervisors, read|write, one
 p, supervisor, projects, read, one|all
-p, supervisor, tasks, read, one|all
+p, supervisor, reports, read|write, one|all
 
-p, officer, accounts, read|write, one
-p, officer, projects, read|write, one
-p, officer, tasks, read|write, one
-
-p, Common, accounts, read|write, one
-p, Common, public, read, one|all
-
-p, Anonymous, public, read, one|all
-
-g, User, Common
+g, system, root

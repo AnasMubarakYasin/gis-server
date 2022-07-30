@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "app",
+      name: "server",
       script: "bin/www",
       args: "",
       cwd: ".",

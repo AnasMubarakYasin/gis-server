@@ -36,7 +36,7 @@ module.exports = async function (app) {
     version: api_version,
     debug: true,
     logger: logger,
-    schema: [schema],
+    schemas: [schema],
   });
   const authc = await new Authentication({
     name: api_name,

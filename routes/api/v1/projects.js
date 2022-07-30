@@ -10,11 +10,13 @@ const Authentication = require("#lib/authentication");
 const Authorization = require("#lib/authorization");
 const Validator = require("#lib/validator");
 const Interchange = require("#lib/interchange");
+const middleware_auth_ctor = require("#middleware/auth");
 
 const api_name = "projects";
 const api_version = "1";
 const root = process.env.PWD;
-const schema = require("#schema/v1/projects");
+// const schema = require("#schema/v1/projects");
+const schema = require("#schema/v2/index");
 
 /**
  * @param {import('express').Application} app
@@ -36,7 +38,7 @@ module.exports = async function (app) {
     version: api_version,
     debug: true,
     logger: logger,
-    schema: [schema],
+    schemas: [schema],
   });
   const authc = await new Authentication({
     name: api_name,
@@ -57,53 +59,70 @@ module.exports = async function (app) {
       p_data: path.join(root, "data/rbac-ext.csv"),
     },
   }).init();
+  const middleware_auth = await middleware_auth_ctor(app);
   /**
    * @type {App.Models.CtorProjects}
    */
   const Model = db.model(api_name);
   /**
-   * @type {typeof App.Models.Users}
+   * @type {App.Models.CtorReports}
    */
-  const Model_Users = db.model("users");
-  /**
-   * @type {App.Models.CtorTasks}
-   */
-  const Model_Tasks = db.model("tasks");
+  const Model_Reports = db.model("reports");
 
   await fs.promises.mkdir(path.join(root, "storage/images"), {
     recursive: true,
   });
+  await fs.promises.mkdir(path.join(root, "storage/proposals"), {
+    recursive: true,
+  });
 
-  const authc_route = authc.jwt_auth(
+  router.get(
+    "/",
+    middleware_auth.router_authc,
+    middleware_auth.router_authz,
     async function (req, res, nx) {
-      return {
-        issuer: "user",
-      };
-    },
-    async function (payload, req, res, nx) {
-      const { sub: id, role } = payload;
-      const Model = db.model(role + "s");
-      if (!Model) {
-        nx(interchange.error(401, `model ${role} not exists`));
+      try {
+        let payload;
+        if (req[authc.s.auth_info].role == "supervisor") {
+          payload = await Model.findAll({
+            include: {
+              association: "supervisor",
+              where: { id: req[authc.s.auth_info].id },
+            },
+          });
+        } else {
+          payload = await Model.findAll();
+        }
+        interchange.success(res, 200, payload);
+      } catch (error) {
+        nx(error);
       }
-      const user = await Model.findOne({ where: { id } });
-      if (!user) {
-        nx(interchange.error(401, `user ${role} not exists`));
-      }
-      return user.toJSON();
     }
   );
-
-  router.get("/", async function (req, res, nx) {
+  router.get("/public", async function (req, res, nx) {
     try {
-      interchange.success(res, 200, await Model.findAll());
+      interchange.success(
+        res,
+        200,
+        await Model.findAll({
+          attributes: {
+            exclude: [
+              "id",
+              "id_admins",
+              "id_supervisors",
+              "createdAt",
+              "updatedAt",
+            ],
+          },
+        })
+      );
     } catch (error) {
       nx(error);
     }
   });
   router.post(
     "/create",
-    authc_route,
+    middleware_auth.router_authc,
     authz.rbac_auth(async function (req, res, nx) {
       return {
         role: req[authc.s.auth_info].role,
@@ -112,12 +131,14 @@ module.exports = async function (app) {
         number: "one",
       };
     }),
-    validator.validate({ body: "projects.json#/definitions/create" }),
+    validator.validate({
+      body: "index.json#/definitions/projects/definitions/create",
+    }),
     async function (req, res, nx) {
       try {
         const project = await Model.create(req.body);
 
-        interchange.success(res, 201);
+        interchange.success(res, 201, "created");
       } catch (error) {
         nx(interchange.error(500, error));
       }
@@ -125,8 +146,41 @@ module.exports = async function (app) {
   );
   router
     .route("/:id")
+    .get(
+      middleware_auth.router_authc,
+      authz.rbac_auth(async function (req, res, nx) {
+        return {
+          role: req[authc.s.auth_info].role,
+          resource: api_name,
+          action: "read",
+          number: "one",
+        };
+      }),
+      async function (req, res, nx) {
+        try {
+          const {
+            params: { id },
+            query: { includes = [] },
+          } = req;
+          const include = Array.isArray(includes)
+            ? includes.map((rel) => ({ association: rel }))
+            : { association: includes };
+          const model = await Model.findOne({
+            where: { id },
+            // @ts-ignore
+            include,
+            // include: includes,
+          });
+
+          const project = model.toJSON();
+          interchange.success(res, 200, project);
+        } catch (error) {
+          nx(interchange.error(500, error));
+        }
+      }
+    )
     .patch(
-      authc_route,
+      middleware_auth.router_authc,
       authz.rbac_auth(async function (req, res, nx) {
         return {
           role: req[authc.s.auth_info].role,
@@ -135,7 +189,9 @@ module.exports = async function (app) {
           number: "one",
         };
       }),
-      validator.validate({ body: "projects.json#/definitions/update" }),
+      validator.validate({
+        body: "index.json#/definitions/projects/definitions/update",
+      }),
       async function (req, res, nx) {
         try {
           const {
@@ -146,12 +202,20 @@ module.exports = async function (app) {
 
           const project = model.toJSON();
           const image = project.image.replace("resources", "storage");
-          const f_path = path.join(root, image);
+          const image_path = path.join(root, image);
+          const proposal = project.proposal.replace("resources", "storage");
+          const proposal_path = path.join(root, proposal);
 
           if (body.image != project.image) {
             await fs.promises
-              .access(f_path, fs.constants.F_OK)
-              .then(() => fs.promises.rm(f_path))
+              .access(image_path, fs.constants.F_OK)
+              .then(() => fs.promises.rm(image_path))
+              .catch((err) => {});
+          }
+          if (body.proposal != project.proposal) {
+            await fs.promises
+              .access(proposal_path, fs.constants.F_OK)
+              .then(() => fs.promises.rm(proposal_path))
               .catch((err) => {});
           }
 
@@ -164,7 +228,7 @@ module.exports = async function (app) {
       }
     )
     .delete(
-      authc_route,
+      middleware_auth.router_authc,
       authz.rbac_auth(async function (req, res, nx) {
         return {
           role: req[authc.s.auth_info].role,
@@ -181,12 +245,20 @@ module.exports = async function (app) {
           const model = await Model.findOne({ where: { id } });
           const project = model.toJSON();
           const image = project.image.replace("resources", "storage");
-          const f_path = path.join(root, image);
+          const proposal = project.proposal.replace("resources", "storage");
+          const img_path = path.join(root, image);
+          const proposal_path = path.join(root, proposal);
 
-          await fs.promises
-            .access(f_path, fs.constants.F_OK)
-            .then(() => fs.promises.rm(f_path))
-            .catch((err) => {});
+          await Promise.all([
+            fs.promises
+              .access(img_path, fs.constants.F_OK)
+              .then(() => fs.promises.rm(img_path))
+              .catch((err) => {}),
+            fs.promises
+              .access(proposal_path, fs.constants.F_OK)
+              .then(() => fs.promises.rm(proposal_path))
+              .catch((err) => {}),
+          ]);
           await model.destroy();
 
           interchange.success(res, 200, "deleted");
@@ -199,10 +271,10 @@ module.exports = async function (app) {
     try {
       const project = await Model.findOne({
         where: { name: req.params.name },
-        include: {
-          model: Model_Tasks,
-          attributes: { exclude: ["createdAt", "updatedAt"] },
-        },
+        // include: {
+        //   model: Model_Reports,
+        //   attributes: { exclude: ["createdAt", "updatedAt"] },
+        // },
         attributes: { exclude: ["createdAt", "updatedAt"] },
       });
       interchange.success(res, 200, project);
@@ -210,12 +282,16 @@ module.exports = async function (app) {
       nx(interchange.error(500, error));
     }
   });
-  router.post("/image", function (req, res, nx) {
+  router.post("/image/*", function (req, res, nx) {
     if (!req.is("image/*")) {
       return nx(interchange.error(406));
     }
-    const filename = `${Date.now()}.${req.get("content-type").substring(6)}`;
-    const file_path = path.join(root, "storage/images", filename);
+    const name = Object.values(req.params).join("/");
+    if (!name) {
+      return nx(interchange.error(400));
+    }
+    const file_name = `${name}.${req.get("content-type").substring(6)}`;
+    const file_path = path.join(root, "storage/images", file_name);
     const stream = fs.createWriteStream(file_path);
 
     req.pipe(stream);
@@ -224,7 +300,32 @@ module.exports = async function (app) {
       nx(interchange.error(500, error));
     });
     stream.once("finish", () => {
-      interchange.success(res, 201, path.join("/resources/images", filename));
+      interchange.success(res, 201, path.join("/resources/images", file_name));
+    });
+  });
+  router.post("/proposal/*", function (req, res, nx) {
+    if (!req.is("application/pdf")) {
+      return nx(interchange.error(406));
+    }
+    const name = Object.values(req.params).join("/");
+    if (!name) {
+      return nx(interchange.error(400));
+    }
+    const file_name = `${name}.pdf`;
+    const file_path = path.join(root, "storage/proposals", file_name);
+    const stream = fs.createWriteStream(file_path);
+
+    req.pipe(stream);
+
+    stream.once("error", (error) => {
+      nx(interchange.error(500, error));
+    });
+    stream.once("finish", () => {
+      interchange.success(
+        res,
+        201,
+        path.join("/resources/proposals", file_name)
+      );
     });
   });
 

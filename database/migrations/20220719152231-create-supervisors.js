@@ -22,14 +22,21 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      image: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      name: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      nip: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
       role: {
         type: Sequelize.STRING,
         defaultValue: "supervisor",
-      },
-      email: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
       },
 
       created_at: {

@@ -1,6 +1,6 @@
 {
   "name": "gis-server",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Server",
   "author": "Anas <bladerlaiga@gmail.com>",
   "license": "MIT",
@@ -13,13 +13,17 @@
     "#schema/*": "./schema/*.json",
     "#model/*": "./database/models/*.js",
     "#util/*": "./util/*.js",
+    "#middleware/*": "./middleware/*.js",
     "#api/*": "./routes/api/*.js",
     "#routes/*": "./routes/*.js"
   },
   "scripts": {
     "install": "echo 'hello'",
     "start": "pm2 start ecosystem.config.js",
-    "dev": "node-dev --notify=false --respawn=false --clear ./bin/www",
+    "stop": "pm2 stop ecosystem.config.js",
+    "restart": "pm2 restart ecosystem.config.js",
+    "dev": "node-dev --trace-warnings --notify=false --respawn=false --clear ./bin/www",
+    "schema:scan": "node-dev ./lib/scheming.js",
     "schema:gen": "json2ts --cwd=schema/v1 -i schema/v1/*.json -o type/v1/*.d.ts",
     "migrate:gen": "sequelize-cli model:generate --name new --attributes pk:integer --underscored --debug --force",
     "migrate:up": "sequelize-cli db:migrate --from --debug",
@@ -31,6 +35,7 @@
   "dependencies": {
     "ajv": "^8.11.0",
     "ajv-errors": "^3.0.0",
+    "ajv-formats": "^2.1.1",
     "bcrypt": "^5.0.1",
     "casbin": "^5.15.2",
     "chalk": "^4.1.2",
@@ -55,6 +60,8 @@
     "rate-limiter-flexible": "^2.3.7",
     "rotating-file-stream": "^3.0.4",
     "sequelize": "^6.21.2",
+    "sequelize-json-schema": "^2.1.1",
+    "systeminformation": "^5.12.1",
     "winston": "^3.7.2"
   },
   "devDependencies": {

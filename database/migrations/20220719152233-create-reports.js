@@ -1,7 +1,11 @@
 "use strict";
 module.exports = {
+  /**
+   * @param {import('sequelize').QueryInterface} queryInterface
+   * @param {import('sequelize').DataTypes} Sequelize
+   */
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("tasks", {
+    await queryInterface.createTable("reports", {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -14,16 +18,28 @@ module.exports = {
         references: { model: "projects", key: "id" },
       },
 
-      order: {
-        type: Sequelize.INTEGER,
+      project_copy: {
+        type: Sequelize.JSON,
         allowNull: false,
       },
-      note: {
-        type: Sequelize.TEXT("medium"),
+      reported_at: {
+        type: Sequelize.DATEONLY,
         allowNull: false,
       },
-      done: {
-        type: Sequelize.BOOLEAN,
+      preparation: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      base_building: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      structure: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      supervisor_instruction: {
+        type: Sequelize.TEXT,
         allowNull: false,
       },
 
@@ -38,6 +54,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("tasks");
+    await queryInterface.dropTable("reports");
   },
 };
