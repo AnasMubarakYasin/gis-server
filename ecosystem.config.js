@@ -1,13 +1,13 @@
 module.exports = {
   apps: [
     {
-      name: "server",
+      name: "gis-server",
       script: "bin/www",
       args: "",
       cwd: ".",
       watch: false,
       ignore_watch: ["[/\\]./", "node_modules", "public", "data"],
-      exec_mode: "cluster",
+      exec_mode: "fork",
       error_file: "log/pm2.error.log",
       out_file: "log/pm2.log",
       wait_ready: true,
