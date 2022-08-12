@@ -94,6 +94,8 @@ module.exports = async function (app) {
           members: admins + supervisors,
           projects,
           reports,
+          warn: 0,
+          error: 0,
         });
       } catch (error) {
         nx(error);
@@ -103,8 +105,10 @@ module.exports = async function (app) {
   router.get(
     "/system",
     middleware_auth.router_authc,
-    middleware_auth.router_authz,
     async function (req, res, nx) {
+      if (req[authc.s.auth_info].role != middleware_auth.config.usr_root.role) {
+        return nx(interchange.error(403));
+      }
       try {
         const cpu = await si.currentLoad().then((data) => {
           return {
@@ -205,6 +209,84 @@ module.exports = async function (app) {
       }
     }
   );
+  // const route_safe_model = function (req, res, nx) {
+  //   const Model = db.model(req.params.model);
+  //   if (!Model) {
+  //     return nx(`Unknown Model ${req.params.model}`);
+  //   }
+  //   nx();
+  // };
+  router
+    .route("/:model")
+    .get(
+      middleware_auth.router_authc,
+      middleware_auth.router_authz,
+      async function (req, res, nx) {
+        try {
+          const Model = db.model(req.params.model);
+          if (!Model) {
+            throw new Error(`Unknown Model ${req.params.model}`);
+          }
+          interchange.success(res, 200, await Model.findAll());
+        } catch (error) {
+          nx(error);
+        }
+      }
+    )
+    .patch(
+      middleware_auth.router_authc,
+      middleware_auth.router_authz,
+      async function (req, res, nx) {
+        const tr = await db.transaction();
+        try {
+          const Model = db.model(req.params.model);
+          if (!Model) {
+            throw new Error(`Unknown Model ${req.params.model}`);
+          }
+          if (!Array.isArray(req.body)) {
+            req.body = [req.body];
+          }
+          const list = [];
+          for (const item of req.body) {
+            const model = await Model.findByPk(item.id, { transaction: tr });
+            list.push(model.toJSON());
+            await model.update(item.value, { transaction: tr });
+          }
+          await tr.commit();
+          interchange.success(res, 200, list);
+        } catch (error) {
+          await tr.rollback();
+          nx(error);
+        }
+      }
+    )
+    .delete(
+      middleware_auth.router_authc,
+      middleware_auth.router_authz,
+      async function (req, res, nx) {
+        const tr = await db.transaction();
+        try {
+          const Model = db.model(req.params.model);
+          if (!Model) {
+            throw new Error(`Unknown Model ${req.params.model}`);
+          }
+          if (!Array.isArray(req.body)) {
+            req.body = [req.body];
+          }
+          const list = [];
+          for (const item of req.body) {
+            const model = await Model.findByPk(item, { transaction: tr });
+            list.push(model.toJSON());
+            await model.destroy({ transaction: tr });
+          }
+          await tr.commit();
+          interchange.success(res, 200, list);
+        } catch (error) {
+          await tr.rollback();
+          nx(error);
+        }
+      }
+    );
   logger.profile(`api ${api_name}`);
 
   return router;

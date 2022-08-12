@@ -22,6 +22,15 @@ const config = {
   expire: "1h",
   roles: schema.definitions.data.properties.role.enum,
   models: ["admins", "supervisors"],
+  usr_root: {
+    username: process.env.ROOT_NAME,
+    password: process.env.ROOT_PASS,
+    id: 1,
+    image: "",
+    name: "root",
+    nip: "0000",
+    role: "root",
+  },
 };
 
 /**
@@ -79,6 +88,9 @@ module.exports = async function (app) {
     },
     async function (payload, req, res, nx) {
       const { sub: id, role } = payload;
+      if (role == config.usr_root.role && id == config.usr_root.id) {
+        return config.usr_root;
+      }
       const Model = db.model(role + "s");
       if (!Model) {
         nx(interchange.error(401, `model "${role}" not exists`));
@@ -92,25 +104,45 @@ module.exports = async function (app) {
   );
   const router_authz = authz.rbac_auth(async function (req, res, nx) {
     // console.log(req.route);
-    // console.log(req.originalUrl);
+    const role = req[authc.s.auth_info].role;
+    if (role == config.usr_root.role) {
+      return;
+    }
     if (!/\/api\/v\d\/.*/.test(req.originalUrl)) {
       throw new Error("not supported api", {
         cause: "middleware not in api route",
       });
     }
     let resource = req.originalUrl.replace(/\/api\/v\d\/(\w*)\/?.*/, "$1");
-    let action = "read";
-    let number = "one";
-    if (req.method != "GET") {
-      action = "write";
+    let action = "x";
+    let number = "o";
+    switch (req.method) {
+      case "GET":
+        if (req.route) {
+          if (req.route.path != "/:id") {
+            number = "a";
+          }
+        }
+        action = "r";
+        break;
+      case "POST":
+      case "PUT":
+        action = "c";
+        break;
+      case "PATCH":
+        action = "u";
+        break;
+      case "DELETE":
+        action = "d";
+        break;
     }
-    if (req.route) {
-      if (req?.route.path != "/:id") {
-        number = "all";
+    if (req.is("json")) {
+      if (Array.isArray(req.body)) {
+        number = "a";
       }
     }
     return {
-      role: req[authc.s.auth_info].role,
+      role,
       resource,
       action,
       number,
@@ -125,6 +157,9 @@ module.exports = async function (app) {
     },
     async function (payload, req, res, nx) {
       const { sub: id, role } = payload;
+      if (role == config.usr_root.role && id == config.usr_root.id) {
+        return config.usr_root;
+      }
       const Model = db.model(role + "s");
       if (!Model) {
         nx(interchange.error(401, `model ${role} not exists`));
@@ -200,6 +235,20 @@ module.exports = async function (app) {
       authc.jwt_gen(async function (request, response, next) {
         try {
           const { body } = request;
+          if (
+            config.usr_root.username == body.username &&
+            config.usr_root.password == body.password
+          ) {
+            request.user = config.usr_root;
+            return {
+              sub: config.usr_root.id,
+              role: config.usr_root.role,
+              opt: {
+                issuer: config.issuer,
+                expiresIn: config.expire,
+              },
+            };
+          }
           let data;
           for (const model of config.roles) {
             const DModel = db.model(model + "s");
@@ -252,35 +301,25 @@ module.exports = async function (app) {
     );
     router
       .route("/")
-      .get(
-        router_authc,
-        authz.rbac_auth(async function (req) {
-          return {
-            role: req[authc.s.auth_info].role,
-            resource: "users",
-            action: "read",
-            number: "all",
-          };
-        }),
-        async function (req, res, nx) {
-          const users = [];
-          try {
-            for (const name of config.models) {
-              const Model = db.model(name);
-              const data = await Model.findAll();
-              users.push(...data);
-            }
-            interchange.success(res, 200, users);
-          } catch (error) {
-            nx(error);
+      .get(router_authc, router_authz, async function (req, res, nx) {
+        const users = [];
+        try {
+          for (const name of config.models) {
+            const Model = db.model(name);
+            const data = await Model.findAll();
+            users.push(...data);
           }
+          interchange.success(res, 200, users);
+        } catch (error) {
+          nx(error);
         }
-      )
+      })
       .post(function (req, res, nx) {
         nx(interchange.error(501));
       })
       .patch(
         router_authc,
+        router_authz,
         validator.validate({ body: "auth.json#/definitions/update" }),
         async function (req, res, nx) {
           const { body } = req;
@@ -318,7 +357,7 @@ module.exports = async function (app) {
           }
         }
       )
-      .delete(router_authc, async function (req, res, nx) {
+      .delete(router_authc, router_authz, async function (req, res, nx) {
         const { body } = req;
         const tr = await db.transaction();
         let payload;
@@ -347,7 +386,7 @@ module.exports = async function (app) {
           nx(error);
         }
       })
-      .put(router_authc, async function (req, res, nx) {
+      .put(router_authc, router_authz, async function (req, res, nx) {
         const tr = await db.transaction();
         let { body } = req;
         try {
@@ -403,6 +442,7 @@ module.exports = async function (app) {
   logger.profile(`middleware ${middleware_name}`);
 
   return {
+    config,
     schema,
     register,
     router_authc,

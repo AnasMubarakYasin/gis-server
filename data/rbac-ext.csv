@@ -1,15 +1,14 @@
-p, root, all, read|write, one|all
+p, admin, users, .+, .+
+p, admin, users, u, o
+p, admin, admins, .+, .+
+p, admin, supervisors, .+, .+
+p, admin, projects, r|c|d, .+
+p, admin, reports, r, .+
+p, admin, models, .+, .+
 
-p, admin, users, read|write, one|all
-p, admin, roles, read|write, one|all
-p, admin, admins, read|write, one|all
-p, admin, supervisors, read|write, one|all
-p, admin, projects, read|write, one|all
-p, admin, reports, read|write, one|all
-p, admin, models, read|write, one|all
+p, supervisor, users, u, o
+p, supervisor, supervisors, .+, .+
+p, supervisor, projects, r|u, .+
+p, supervisor, reports, r|c, .+
 
-p, supervisor, supervisors, read|write, one
-p, supervisor, projects, read, one|all
-p, supervisor, reports, read|write, one|all
-
-g, system, root
+g, admin_gis, admin

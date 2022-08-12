@@ -148,14 +148,7 @@ module.exports = async function (app) {
     .route("/:id")
     .get(
       middleware_auth.router_authc,
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "read",
-          number: "one",
-        };
-      }),
+      middleware_auth.router_authz,
       async function (req, res, nx) {
         try {
           const {
@@ -181,14 +174,7 @@ module.exports = async function (app) {
     )
     .patch(
       middleware_auth.router_authc,
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "write",
-          number: "one",
-        };
-      }),
+      middleware_auth.router_authz,
       validator.validate({
         body: "index.json#/definitions/projects/definitions/update",
       }),
@@ -229,14 +215,7 @@ module.exports = async function (app) {
     )
     .delete(
       middleware_auth.router_authc,
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "write",
-          number: "one",
-        };
-      }),
+      middleware_auth.router_authz,
       async function (req, res, nx) {
         try {
           const {

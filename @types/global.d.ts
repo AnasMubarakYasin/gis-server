@@ -28,6 +28,8 @@ declare global {
       SERVER_MODE: string;
       SERVER_HAS_ENV: boolean;
       JWT_KEY: string;
+      ROOT_NAME: string;
+      ROOT_PASS: string;
     }
   }
   namespace App {
