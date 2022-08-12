@@ -1,7 +1,8 @@
 module.exports = {
   apps: [
     {
-      name: "gis-server",
+      name: "server",
+      namespace: "gis",
       script: "bin/www",
       args: "",
       cwd: ".",
