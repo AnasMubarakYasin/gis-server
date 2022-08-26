@@ -5,6 +5,9 @@ import { SchemaAdmins } from "../type/v1/admins";
 import { SchemaSupervisors } from "../type/v1/supervisors";
 
 import * as TypeV2 from "../type/v2/index";
+import Logger from "#root/lib/logger";
+
+import * as express from "express";
 
 declare global {
   namespace NodeJS {
@@ -30,6 +33,28 @@ declare global {
       JWT_KEY: string;
       ROOT_NAME: string;
       ROOT_PASS: string;
+    }
+  }
+  namespace Express {
+    interface Application {
+      event(
+        path: string,
+        ...handlers: ((
+          request: Express.Request,
+          response: Express.Response,
+          next: Express.NextFunction
+        ) => void)
+      ): void;
+    }
+    interface Response {
+      stream_ping(): void;
+      stream_event(data: any, event?: string, id?: number): void;
+      stream_event_end(data: any, event?: string, id?: number): void;
+    }
+    interface NextFunction {
+      (): void;
+      (error: Error): void;
+      (name: string): void;
     }
   }
   namespace App {
@@ -70,6 +95,70 @@ declare global {
       type CtorReports = ModelStatic<Reports>;
       type CtorAdmins = ModelStatic<Admins>;
       type CtorSupervisors = ModelStatic<Supervisors>;
+    }
+    module Lib {
+      namespace Logger {
+        type Instance = Logger;
+      }
+      namespace SSE {
+        interface Options {
+          app: express.Application;
+          debug: boolean;
+          logger?: Lib.Logger.Instance;
+          prefix: string;
+        }
+        type Handler = (
+          request: Express.Request,
+          response: Express.Response,
+          next: Express.NextFunction
+        ) => void;
+      }
+      namespace Activity {
+        interface Options {
+          name: string;
+          version: string;
+          debug: boolean;
+          logger?: Lib.Logger.Instance;
+          group: "year" | "month" | "day";
+          dir: string;
+          resource: string;
+        }
+        interface MessageInternal {
+          datetime: string;
+          tag: string;
+          resource: string;
+          state: "success" | "error";
+          auth: string;
+          data: object;
+          stack: string;
+        }
+        interface MessageLog {
+          tag: string;
+          state: "success" | "error";
+          auth: string;
+          data: object;
+        }
+        interface Message {
+          state: "success" | "error";
+          auth: string;
+          data: object;
+        }
+        namespace Manager {
+          interface Options {
+            dir: string;
+          }
+          interface StreamOptions {
+            resource: string;
+            day: number;
+          }
+          interface StreamRangeOptions {
+            resource: string;
+            start: Date;
+            end: Date;
+          }
+          type HandleStream = (data: string) => void;
+        }
+      }
     }
   }
 }

@@ -22,12 +22,6 @@ module.exports = (sequelize, DataTypes) => {
           allowNull: false,
         },
       });
-      this.belongsTo(models.admins, {
-        foreignKey: {
-          name: "id_admins",
-          allowNull: false,
-        },
-      });
     }
   }
   projects.init(
@@ -36,11 +30,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: { model: "supervisors", key: "id" },
-      },
-      id_admins: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-        references: { model: "admins", key: "id" },
       },
 
       image: {

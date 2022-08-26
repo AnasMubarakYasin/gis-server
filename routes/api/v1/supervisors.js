@@ -67,14 +67,7 @@ module.exports = async function (app) {
   router.use(middleware_auth.router_authc);
 
   router.route("/").get(
-    authz.rbac_auth(async function (req, res, nx) {
-      return {
-        role: req[authc.s.auth_info].role,
-        resource: api_name,
-        action: "read",
-        number: "all",
-      };
-    }),
+    middleware_auth.router_authz,
     async function (req, res, nx) {
       try {
         const data = await Model.findAll();
@@ -87,56 +80,27 @@ module.exports = async function (app) {
   router
     .route("/:id")
     .get(
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "read",
-          number: "one",
-        };
-      }),
+      middleware_auth.router_authz,
       function (req, res, nx) {
         nx(interchange.error(501));
       }
     )
     .patch(
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "write",
-          number: "one",
-        };
-      }),
+      middleware_auth.router_authz,
       validator.validate({ body: "supervisors.json#/definitions/update" }),
       function (req, res, nx) {
         nx(interchange.error(501));
       }
     )
     .delete(
-      authz.rbac_auth(async function (req, res, nx) {
-        return {
-          role: req[authc.s.auth_info].role,
-          resource: api_name,
-          action: "write",
-          number: "one",
-        };
-      }),
+      middleware_auth.router_authz,
       function (req, res, nx) {
         nx(interchange.error(501));
       }
     );
   router.post(
     "/create",
-    authz.rbac_auth(async function (req, res, nx) {
-      return {
-        role: req[authc.s.auth_info].role,
-        resource: api_name,
-        action: "write",
-        number: "one",
-      };
-    }),
-    validator.validate({ body: "supervisors.json#/definitions/create" }),
+    middleware_auth.router_authz,
     authc.jwt_gen(async function (request, response, next) {
       try {
         const { body } = request;

@@ -14,6 +14,14 @@ const Interchange = require("#root/lib/interchange");
 const limitter = require("#root/lib/limitter");
 
 const app = express();
+
+process.on("SIGINT", function () {
+  app.emit("close");
+});
+process.on("SIGTERM", () => {
+  app.emit("close");
+});
+
 const { env } = process;
 
 const model_admins = require("#model/admins");
@@ -30,6 +38,7 @@ const routes_api_v1_admins = require("#api/v1/admins");
 const routes_api_v1_supervisors = require("#api/v1/supervisors");
 const routes_api_v1_projects = require("#api/v1/projects");
 const routes_api_v1_reports = require("#api/v1/reports");
+const routes_event_activity = require("#root/routes/event/activity");
 // const routesLangEnAccount = require("#routes/lang/en/account");
 
 const routes_setting = require("#routes/setting/index");
@@ -120,12 +129,15 @@ async function init() {
   app.use("/api/v1/reports", await routes_api_v1_reports(app));
   app.use("/api", Interchange.not_found_middle(), Interchange.error_middle());
 
+  app.use("/event/activity", await routes_event_activity(app));
+  app.use("/event", Interchange.not_found_middle(), Interchange.error_middle());
+
   app.use(function (req, res, nx) {
     nx(createHttpError(404));
   });
   app.use(function (err, req, res, next) {
     if (res.headersSent) {
-      next();
+      return next();
     }
     res.locals.message = err.message;
     res.locals.error = req.app.get("env") === "development" ? err : {};

@@ -10,6 +10,7 @@ const Authentication = require("#lib/authentication");
 const Authorization = require("#lib/authorization");
 const Validator = require("#lib/validator");
 const Interchange = require("#lib/interchange");
+const Activity = require("#lib/activity");
 
 const middleware_name = "auth";
 const middleware_version = "1";
@@ -22,6 +23,7 @@ const config = {
   expire: "1h",
   roles: schema.definitions.data.properties.role.enum,
   models: ["admins", "supervisors"],
+  salt: "",
   usr_root: {
     username: process.env.ROOT_NAME,
     password: process.env.ROOT_PASS,
@@ -63,6 +65,7 @@ module.exports = async function (app) {
     description: "",
     debug,
     logger: logger,
+    interchange,
     jwt: { secretKey: authc_key },
   });
   const authz = new Authorization({
@@ -71,19 +74,38 @@ module.exports = async function (app) {
     description: "",
     debug,
     logger: logger,
+    interchange,
     rbac: {
       p_conf: path.join(root, "config/rbac-ext.conf"),
       p_data: path.join(root, "data/rbac-ext.csv"),
     },
   });
+  const activity = new Activity({
+    name: middleware_name,
+    version: middleware_version,
+    debug: true,
+    logger: logger,
+    dir: path.join(process.env.LOG_DIR),
+    group: "day",
+    resource: middleware_name,
+  });
 
   await authc.init();
   await authz.init();
+  config.salt = await bcrypt.genSalt(8);
 
   const router_authc = authc.jwt_auth(
     async function (req, res, nx) {
       return {
         issuer: config.issuer,
+        error(error) {
+          activity.log({
+            state: "error",
+            tag: "authentication",
+            auth: req[authc.s.auth_info]?.username || "---",
+            data: { error },
+          });
+        },
       };
     },
     async function (payload, req, res, nx) {
@@ -146,6 +168,14 @@ module.exports = async function (app) {
       resource,
       action,
       number,
+      error(error) {
+        activity.log({
+          state: "error",
+          tag: "authorization",
+          auth: req[authc.s.auth_info].username,
+          data: { error },
+        });
+      },
     };
   });
 
@@ -221,10 +251,33 @@ module.exports = async function (app) {
             throw interchange.error(400, "user already exist");
           } else {
             delete body.role;
+            body.password = await bcrypt.hash(body.password, config.salt);
             await Model.create(body);
             interchange.success(response, 200);
+            activity.log({
+              state: "success",
+              tag: "signup",
+              auth: "---",
+              data: {
+                body: {
+                  username: request.body.username,
+                  role: request.body.role,
+                },
+              },
+            });
           }
         } catch (error) {
+          activity.log({
+            state: "error",
+            tag: "signup",
+            auth: "---",
+            data: {
+              body: {
+                username: request.body.username,
+                role: request.body.role,
+              },
+            },
+          });
           next(error);
         }
       }
@@ -268,7 +321,7 @@ module.exports = async function (app) {
             throw interchange.error(401, `user not exists`);
           }
           const user = data.toJSON();
-          if (body.password != user.password) {
+          if (!(await bcrypt.compare(body.password, user.password))) {
             throw interchange.error(401, "username or password wrong");
           }
           request.user = user;
@@ -281,6 +334,17 @@ module.exports = async function (app) {
             },
           };
         } catch (error) {
+          activity.log({
+            state: "error",
+            tag: "signin",
+            auth: "---",
+            data: {
+              body: {
+                username: request.body.username,
+                role: request.body.role,
+              },
+            },
+          });
           next(error);
         }
       }),
@@ -288,8 +352,25 @@ module.exports = async function (app) {
         const token = request[authc.s.jwt_token];
         const user = request.user;
         interchange.success(response, 200, { token, user: user });
+        activity.log({
+          state: "success",
+          tag: "signin",
+          auth: "---",
+          data: {
+            body: { username: request.body.username, role: request.body.role },
+          },
+        });
       }
     );
+    router.get("/signout", router_authc, function (request, response, next) {
+      interchange.success(response, 200, "");
+      activity.log({
+        state: "success",
+        tag: "signout",
+        auth: request[authc.s.auth_info].username,
+        data: {},
+      });
+    });
     router.get(
       "/auth",
       router_auth_refresh,
@@ -297,6 +378,12 @@ module.exports = async function (app) {
         const token = request[authc.s.jwt_token];
         const user = request.user;
         interchange.success(response, 200, { token, user: user });
+        activity.log({
+          state: "success",
+          tag: "auth",
+          auth: user["username"],
+          data: {},
+        });
       }
     );
     router
@@ -310,6 +397,11 @@ module.exports = async function (app) {
             users.push(...data);
           }
           interchange.success(res, 200, users);
+          activity.read({
+            state: "success",
+            auth: req[authc.s.auth_info].username,
+            data: {},
+          });
         } catch (error) {
           nx(error);
         }
@@ -322,35 +414,42 @@ module.exports = async function (app) {
         router_authz,
         validator.validate({ body: "auth.json#/definitions/update" }),
         async function (req, res, nx) {
-          const { body } = req;
+          let { body } = req;
           const tr = await db.transaction();
           let payload;
           try {
-            if (Array.isArray(body)) {
-              const list = [];
-              for (const item of body) {
-                const result = await get(item.id, item.role, tr);
-                if (result) {
-                  delete item.id;
-                  delete item.username;
-                  delete item.role;
-                  await result.update(item);
-                  list.push(result.toJSON());
-                }
-              }
-              payload = list;
-            } else {
-              const result = await get(body.id, body.role, tr);
+            if (!Array.isArray(body)) {
+              body = [body];
+            }
+            const list = [];
+            for (const item of body) {
+              const result = await get(item.id, item.role, tr);
               if (result) {
-                delete body.id;
-                delete body.username;
-                delete body.role;
-                await result.update(body);
-                payload = result.toJSON();
+                delete item.id;
+                delete item.username;
+                delete item.role;
+                if ("password" in item) {
+                  if (item.password) {
+                    item.password = await bcrypt.hash(
+                      item.password,
+                      config.salt
+                    );
+                  } else {
+                    delete item.password;
+                  }
+                }
+                await result.update(item);
+                list.push(result.toJSON());
               }
             }
+            payload = list;
             await tr.commit();
             interchange.success(res, 200, payload);
+            activity.update({
+              state: "success",
+              auth: req[authc.s.auth_info].username,
+              data: { body },
+            });
           } catch (error) {
             await tr.rollback();
             nx(error);
@@ -381,6 +480,11 @@ module.exports = async function (app) {
           }
           await tr.commit();
           interchange.success(res, 200, payload);
+          activity.delete({
+            state: "success",
+            auth: req[authc.s.auth_info].username,
+            data: { body },
+          });
         } catch (error) {
           await tr.rollback();
           nx(error);
@@ -404,6 +508,11 @@ module.exports = async function (app) {
           }
           await tr.commit();
           interchange.success(res, 200, body);
+          activity.restore({
+            state: "success",
+            auth: req[authc.s.auth_info].username,
+            data: { body },
+          });
         } catch (error) {
           await tr.rollback();
           nx(error);
@@ -412,6 +521,8 @@ module.exports = async function (app) {
 
     router.post(
       "/permission",
+      router_authc,
+      router_authz,
       validator.validate({ body: { type: "object" } }),
       async function (request, response, next) {
         try {
@@ -430,6 +541,12 @@ module.exports = async function (app) {
           logger.profile("enforce");
 
           interchange.success(response, 200, data);
+          activity.log({
+            state: "success",
+            tag: "post",
+            auth: request[authc.s.auth_info].username,
+            data: { endpoint: "permission", body },
+          });
         } catch (error) {
           next(error);
         }

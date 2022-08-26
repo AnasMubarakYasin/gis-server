@@ -10,6 +10,7 @@ const Authentication = require("#lib/authentication");
 const Authorization = require("#lib/authorization");
 const Validator = require("#lib/validator");
 const Interchange = require("#lib/interchange");
+const Activity = require("#lib/activity");
 const middleware_auth_ctor = require("#middleware/auth");
 
 const api_name = "projects";
@@ -59,6 +60,15 @@ module.exports = async function (app) {
       p_data: path.join(root, "data/rbac-ext.csv"),
     },
   }).init();
+  const activity = new Activity({
+    name: api_name,
+    version: api_version,
+    debug: true,
+    logger: logger,
+    dir: path.join(process.env.LOG_DIR),
+    group: "day",
+    resource: api_name,
+  });
   const middleware_auth = await middleware_auth_ctor(app);
   /**
    * @type {App.Models.CtorProjects}
@@ -93,6 +103,11 @@ module.exports = async function (app) {
         } else {
           payload = await Model.findAll();
         }
+        activity.read({
+          state: "success",
+          auth: req[authc.s.auth_info].username,
+          data: {},
+        });
         interchange.success(res, 200, payload);
       } catch (error) {
         nx(error);
@@ -123,20 +138,20 @@ module.exports = async function (app) {
   router.post(
     "/create",
     middleware_auth.router_authc,
-    authz.rbac_auth(async function (req, res, nx) {
-      return {
-        role: req[authc.s.auth_info].role,
-        resource: api_name,
-        action: "write",
-        number: "one",
-      };
-    }),
+    middleware_auth.router_authz,
     validator.validate({
       body: "index.json#/definitions/projects/definitions/create",
     }),
     async function (req, res, nx) {
       try {
-        const project = await Model.create(req.body);
+        const project = await Model.create(req.body).then((value) => {
+          activity.create({
+            state: "success",
+            auth: req[authc.s.auth_info].username,
+            data: { body: req.body },
+          });
+          return value;
+        });
 
         interchange.success(res, 201, "created");
       } catch (error) {
@@ -163,6 +178,13 @@ module.exports = async function (app) {
             // @ts-ignore
             include,
             // include: includes,
+          }).then((value) => {
+            activity.read({
+              state: "success",
+              auth: req[authc.s.auth_info].username,
+              data: { params: { id }, query: { includes } },
+            });
+            return value;
           });
 
           const project = model.toJSON();
@@ -205,7 +227,13 @@ module.exports = async function (app) {
               .catch((err) => {});
           }
 
-          await model.update(body);
+          await model.update(body).then((value) => {
+            activity.update({
+              state: "success",
+              auth: req[authc.s.auth_info].username,
+              data: { params: { id }, body },
+            });
+          });
 
           interchange.success(res, 200, "updated");
         } catch (error) {
@@ -238,7 +266,13 @@ module.exports = async function (app) {
               .then(() => fs.promises.rm(proposal_path))
               .catch((err) => {}),
           ]);
-          await model.destroy();
+          await model.destroy().then((value) => {
+            activity.delete({
+              state: "success",
+              auth: req[authc.s.auth_info].username,
+              data: { params: { id } },
+            });
+          });
 
           interchange.success(res, 200, "deleted");
         } catch (error) {
@@ -246,21 +280,31 @@ module.exports = async function (app) {
         }
       }
     );
-  router.get("/name/:name", async function (req, res, nx) {
-    try {
-      const project = await Model.findOne({
-        where: { name: req.params.name },
-        // include: {
-        //   model: Model_Reports,
-        //   attributes: { exclude: ["createdAt", "updatedAt"] },
-        // },
-        attributes: { exclude: ["createdAt", "updatedAt"] },
-      });
-      interchange.success(res, 200, project);
-    } catch (error) {
-      nx(interchange.error(500, error));
+  router.get(
+    "/name/:name",
+    middleware_auth.router_authc,
+    middleware_auth.router_authz,
+    async function (req, res, nx) {
+      try {
+        const project = await Model.findOne({
+          where: { name: req.params.name },
+          // include: {
+          //   model: Model_Reports,
+          //   attributes: { exclude: ["createdAt", "updatedAt"] },
+          // },
+          attributes: { exclude: ["createdAt", "updatedAt"] },
+        });
+        activity.read({
+          state: "success",
+          auth: req[authc.s.auth_info].username,
+          data: { params: req.params },
+        });
+        interchange.success(res, 200, project);
+      } catch (error) {
+        nx(interchange.error(500, error));
+      }
     }
-  });
+  );
   router.post("/image/*", function (req, res, nx) {
     if (!req.is("image/*")) {
       return nx(interchange.error(406));

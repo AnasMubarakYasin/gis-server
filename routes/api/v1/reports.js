@@ -10,6 +10,7 @@ const Authentication = require("#lib/authentication");
 const Authorization = require("#lib/authorization");
 const Validator = require("#lib/validator");
 const Interchange = require("#lib/interchange");
+const Activity = require("#lib/activity");
 const middleware_auth_ctor = require("#middleware/auth");
 
 const api_name = "reports";
@@ -58,6 +59,15 @@ module.exports = async function (app) {
       p_data: path.join(root, "data/rbac-ext.csv"),
     },
   }).init();
+  const activity = new Activity({
+    name: api_name,
+    version: api_version,
+    debug: true,
+    logger: logger,
+    dir: path.join(process.env.LOG_DIR),
+    group: "day",
+    resource: api_name,
+  });
   const middleware_auth = await middleware_auth_ctor(app);
   /**
    * @type {App.Models.CtorReports}
@@ -70,6 +80,11 @@ module.exports = async function (app) {
     .get(async function (req, res, nx) {
       try {
         interchange.success(res, 200, await Model.findAll());
+        activity.read({
+          state: "success",
+          auth: req[authc.s.auth_info].username,
+          data: {},
+        });
       } catch (error) {
         nx(error);
       }
@@ -86,6 +101,11 @@ module.exports = async function (app) {
             Model.create(req.body);
           }
           interchange.success(res, 201, "created");
+          activity.create({
+            state: "success",
+            auth: req[authc.s.auth_info].username,
+            data: { body: req.body },
+          });
         } catch (error) {
           nx(error);
         }
@@ -120,6 +140,11 @@ module.exports = async function (app) {
           }
           await transaction.commit();
           interchange.success(res, 201, "created");
+          activity.delete({
+            state: "success",
+            auth: req[authc.s.auth_info].username,
+            data: { params: req.params, body: req.body },
+          });
         } catch (error) {
           await transaction.rollback();
           nx(error);
@@ -131,6 +156,11 @@ module.exports = async function (app) {
     .get(async function (req, res, nx) {
       try {
         interchange.success(res, 200, await Model.findByPk(req.params.id));
+        activity.read({
+          state: "success",
+          auth: req[authc.s.auth_info].username,
+          data: { params: req.params },
+        });
       } catch (error) {
         nx(error);
       }
@@ -144,6 +174,11 @@ module.exports = async function (app) {
           const model = await Model.findByPk(req.params.id);
           await model.update(req.body);
           interchange.success(res, 200, "updated");
+          activity.update({
+            state: "success",
+            auth: req[authc.s.auth_info].username,
+            data: { params: req.params, body: req.body },
+          });
         } catch (error) {
           nx(error);
         }
@@ -154,6 +189,11 @@ module.exports = async function (app) {
         const model = await Model.findByPk(req.params.id);
         await model.destroy();
         interchange.success(res, 200, "deleted");
+        activity.delete({
+          state: "success",
+          auth: req[authc.s.auth_info].username,
+          data: { params: req.params },
+        });
       } catch (error) {
         nx(error);
       }

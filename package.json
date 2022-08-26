@@ -1,6 +1,6 @@
 {
   "name": "gis-server",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Server",
   "author": "Anas <bladerlaiga@gmail.com>",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "#routes/*": "./routes/*.js"
   },
   "scripts": {
-    "install": "echo 'hello'",
+    "install": "node lib/install-module.js",
     "start": "pm2 start ecosystem.config.js",
     "stop": "pm2 stop ecosystem.config.js",
     "restart": "pm2 restart ecosystem.config.js",
@@ -36,6 +36,7 @@
     "ajv": "^8.11.0",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^2.1.1",
+    "ansi-html": "^0.0.9",
     "bcrypt": "^5.0.1",
     "casbin": "^5.15.2",
     "chalk": "^4.1.2",

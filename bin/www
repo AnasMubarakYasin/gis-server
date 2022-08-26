@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 require("dotenv-expand").expand(require("dotenv").config());
+const path = require("path");
 
 /**
  * Module dependencies.
@@ -9,6 +10,17 @@ require("dotenv-expand").expand(require("dotenv").config());
 var init = require("../app");
 var debug = require("debug")("expressjs:server");
 var http = require("http");
+
+console.log("\n\n\n");
+const log = console.log;
+console.log = function (...msg) {
+  const e_stack = new Error().stack
+    .split("\n")
+    .map((item) => item.trim())[2]
+    .replace(/at\s/, "");
+  const stack = e_stack.replace(path.join(process.env.PWD) + "/", "");
+  log(stack, ...msg);
+};
 
 booting();
 

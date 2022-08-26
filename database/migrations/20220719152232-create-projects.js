@@ -17,11 +17,6 @@ module.exports = {
         allowNull: true,
         references: { model: "supervisors", key: "id" },
       },
-      id_admins: {
-        allowNull: false,
-        type: Sequelize.INTEGER,
-        references: { model: "admins", key: "id" },
-      },
 
       image: {
         type: Sequelize.STRING,
