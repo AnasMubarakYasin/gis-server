@@ -39,11 +39,11 @@ declare global {
     interface Application {
       event(
         path: string,
-        ...handlers: ((
+        ...handlers: (
           request: Express.Request,
           response: Express.Response,
           next: Express.NextFunction
-        ) => void)
+        ) => void
       ): void;
     }
     interface Response {
@@ -115,6 +115,7 @@ declare global {
       }
       namespace Activity {
         interface Options {
+          app: express.Application;
           name: string;
           version: string;
           debug: boolean;

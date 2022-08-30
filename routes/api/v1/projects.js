@@ -61,6 +61,7 @@ module.exports = async function (app) {
     },
   }).init();
   const activity = new Activity({
+    app,
     name: api_name,
     version: api_version,
     debug: true,

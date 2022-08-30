@@ -95,7 +95,7 @@ module.exports = async function (app) {
         const unwatch = await activity_manager.stream_range({ resource, start, end }, (data) => {
           res.stream_event(ansiHTML(data));
         });
-        // res.stream_ping();
+        res.stream_ping();
         res.on("close", unwatch);
       } catch (error) {
         nx(error);

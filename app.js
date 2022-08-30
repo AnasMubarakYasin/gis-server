@@ -15,6 +15,7 @@ const limitter = require("#root/lib/limitter");
 
 const app = express();
 
+app.setMaxListeners(0);
 process.on("SIGINT", function () {
   app.emit("close");
 });
@@ -96,9 +97,9 @@ async function init() {
       stream: env.LOG_STDOUT
         ? process.stdout
         : rfs.createStream(env.LOG_FILE, {
-            interval: "1d",
-            path: path.join(__dirname, env.LOG_DIR),
-          }),
+          interval: "1d",
+          path: path.join(__dirname, env.LOG_DIR),
+        }),
     })
   );
 

@@ -81,6 +81,7 @@ module.exports = async function (app) {
     },
   });
   const activity = new Activity({
+    app,
     name: middleware_name,
     version: middleware_version,
     debug: true,
@@ -101,7 +102,7 @@ module.exports = async function (app) {
         error(error) {
           activity.log({
             state: "error",
-            tag: "authentication",
+            tag: "authc",
             auth: req[authc.s.auth_info]?.username || "---",
             data: { error },
           });
@@ -125,7 +126,6 @@ module.exports = async function (app) {
     }
   );
   const router_authz = authz.rbac_auth(async function (req, res, nx) {
-    // console.log(req.route);
     const role = req[authc.s.auth_info].role;
     if (role == config.usr_root.role) {
       return;
@@ -171,7 +171,7 @@ module.exports = async function (app) {
       error(error) {
         activity.log({
           state: "error",
-          tag: "authorization",
+          tag: "authz",
           auth: req[authc.s.auth_info].username,
           data: { error },
         });
