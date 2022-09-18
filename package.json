@@ -1,6 +1,6 @@
 {
   "name": "gis-server",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Server",
   "author": "Anas <bladerlaiga@gmail.com>",
   "license": "MIT",
@@ -36,7 +36,7 @@
     "ajv": "^8.11.0",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^2.1.1",
-    "ansi-html": "^0.0.9",
+    "ansi-to-html": "^0.7.2",
     "bcrypt": "^5.0.1",
     "casbin": "^5.15.2",
     "chalk": "^4.1.2",

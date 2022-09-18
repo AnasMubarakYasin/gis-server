@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
-const ansiHTML = require("ansi-html");
+const AnsiToHtml = require("ansi-to-html");
 const Logger = require("#lib/logger");
 const Database = require("#lib/database");
 const Authentication = require("#lib/authentication");
@@ -77,6 +77,7 @@ module.exports = async function (app) {
   });
   const middleware_auth = await middleware_auth_ctor(app);
   const middleware_sse = await middleware_sse_ctor(app);
+  const ansi = new AnsiToHtml();
   /**
    * @type {App.Models.CtorReports}
    */
@@ -92,9 +93,12 @@ module.exports = async function (app) {
         const resource = req.params.name;
         const start = new Date(+req.query.start);
         const end = new Date(+req.query.end);
-        const unwatch = await activity_manager.stream_range({ resource, start, end }, (data) => {
-          res.stream_event(ansiHTML(data));
-        });
+        const unwatch = await activity_manager.stream_range(
+          { resource, start, end },
+          (data) => {
+            res.stream_event(ansi.toHtml(data));
+          }
+        );
         res.stream_ping();
         res.on("close", unwatch);
       } catch (error) {
