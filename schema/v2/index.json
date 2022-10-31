@@ -473,13 +473,6 @@
 						"activity": {
 							"type": "string"
 						},
-						"status": {
-							"type": "string",
-							"maxLength": 255
-						},
-						"progress": {
-							"type": "number"
-						},
 						"fund_source": {
 							"type": "string",
 							"maxLength": 255

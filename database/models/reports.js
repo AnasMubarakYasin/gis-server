@@ -49,6 +49,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: false,
       },
+      worthiness: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      condition: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
     },
     {
       sequelize,

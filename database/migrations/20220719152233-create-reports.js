@@ -38,6 +38,14 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: false,
       },
+      worthiness: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      },
+      condition: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
       supervisor_instruction: {
         type: Sequelize.TEXT,
         allowNull: false,

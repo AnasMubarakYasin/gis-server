@@ -96,6 +96,7 @@ module.exports = async function (app) {
         let payload;
         if (req[authc.s.auth_info].role == "supervisor") {
           payload = await Model.findAll({
+            where: { status: "Pembangunan" },
             include: {
               association: "supervisor",
               where: { id: req[authc.s.auth_info].id },
@@ -145,6 +146,10 @@ module.exports = async function (app) {
     }),
     async function (req, res, nx) {
       try {
+        Object.assign(req.body, {
+          status: "Pembangunan",
+          progress: 0,
+        });
         const project = await Model.create(req.body).then((value) => {
           activity.create({
             state: "success",
