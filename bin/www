@@ -11,6 +11,8 @@ var init = require("../app");
 var debug = require("debug")("expressjs:server");
 var http = require("http");
 
+process.env.PWD ??= process.cwd();
+
 console.log("\n\n\n");
 const log = console.log;
 console.log = function (...msg) {

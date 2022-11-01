@@ -99,7 +99,7 @@ module.exports = async function (app) {
           if (Array.isArray(req.body)) {
             return nx(interchange.error(501));
           } else {
-            Model.create(req.body);
+            await Model.create(req.body);
           }
           interchange.success(res, 201, "created");
           activity.create({
