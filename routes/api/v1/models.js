@@ -202,7 +202,7 @@ module.exports = async function (app) {
     };
   }
 
-  router.move(
+  router.get(
     "/system",
     middleware_sse.router_authc,
     middleware_sse.intercept,
@@ -221,7 +221,7 @@ module.exports = async function (app) {
       let id_interval = setInterval(() => {
         get_os_info()
           .then((value) => {
-            res["stream"](value);
+            res.stream_event(value);
           })
           .catch((error) => {
             nx(error);
